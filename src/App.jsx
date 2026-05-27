@@ -4,7 +4,7 @@ const ARC_CHAIN_ID = 5042002;
 const ARC_RPC_URL = "https://rpc.testnet.arc.network";
 const ARC_EXPLORER = "https://testnet.arcscan.app";
 const ARC_FAUCET = "https://faucet.circle.com";
-const BUILDER_WALLET = "0x731a7450b1c1dd1dcc0252918bef841bc1b8dab6";
+const POWERED_BY = "Arc TESTNET · Circle USDC";
 
 const ARC_NETWORK_PARAMS = {
   chainId: "0x" + ARC_CHAIN_ID.toString(16),
