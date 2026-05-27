@@ -266,7 +266,6 @@ export default function App() {
         {/* ── MARKETPLACE ── */}
         {tab === "marketplace" && (<>
           <section style={S.hero}>
-            <div style={S.compBadge}>🏆 ARC BUILDER COMPETITION · TESTNET SUBMISSION</div>
             <h1 style={S.heroH}>
               Tokenize <span style={S.accent}>Real World Assets</span><br/>on Arc Blockchain
             </h1>
