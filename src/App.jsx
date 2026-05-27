@@ -26,7 +26,7 @@ const ASSETS = [
     id: 1, name: "Manhattan Office Tower", category: "Real Estate",
     location: "New York, USA", totalValue: 12500000, tokenPrice: 125,
     totalTokens: 100000, availableTokens: 34200, apy: 8.4,
-    image: "🏢", color: "#00C9A7", tag: "PREMIUM",
+    image: "🏢", color: "#D4A843", tag: "PREMIUM",
     description: "Class-A office tower in Midtown Manhattan with long-term institutional tenants.",
   },
   {
@@ -40,7 +40,7 @@ const ASSETS = [
     id: 3, name: "London Tech Hub", category: "Commercial",
     location: "London, UK", totalValue: 6200000, tokenPrice: 62,
     totalTokens: 100000, availableTokens: 48500, apy: 7.1,
-    image: "🏙️", color: "#4ECDC4", tag: "STABLE",
+    image: "🏙️", color: "#4E9CD4", tag: "STABLE",
     description: "Prime tech district co-working space with 95% occupancy rate.",
   },
   {
@@ -104,7 +104,7 @@ export default function App() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       pts.forEach(p => {
         ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,201,167,${p.o})`; ctx.fill();
+        ctx.fillStyle = `rgba(212,168,67,${p.o})`; ctx.fill();
         p.x += p.dx; p.y += p.dy;
         if (p.x < 0 || p.x > canvas.width)  p.dx *= -1;
         if (p.y < 0 || p.y > canvas.height) p.dy *= -1;
@@ -216,8 +216,8 @@ export default function App() {
 
       {/* Toast */}
       {toast && (
-        <div style={{ ...S.toast, background: toast.type === "success" ? "#00C9A722" : toast.type === "error" ? "#FF6B6B22" : "#ffffff11",
-          borderColor: toast.type === "success" ? "#00C9A7" : toast.type === "error" ? "#FF6B6B" : "#ffffff33" }}>
+        <div style={{ ...S.toast, background: toast.type === "success" ? "#D4A84322" : toast.type === "error" ? "#FF6B6B22" : "#ffffff11",
+          borderColor: toast.type === "success" ? "#D4A843" : toast.type === "error" ? "#FF6B6B" : "#ffffff33" }}>
           {toast.msg}
         </div>
       )}
@@ -247,7 +247,7 @@ export default function App() {
           <a href={ARC_EXPLORER} target="_blank" rel="noreferrer" style={S.explorerBtn}>🔍 Arcscan</a>
           <button style={S.shareBtn} onClick={shareOnX}>🐦 Share</button>
           {wallet
-            ? <div style={S.wBadge}><div style={S.wDot}/><span>{short(wallet)}</span><span style={{color:"#00C9A7",fontWeight:700}}>{balance} USDC</span></div>
+            ? <div style={S.wBadge}><div style={S.wDot}/><span>{short(wallet)}</span><span style={{color:"#D4A843",fontWeight:700}}>{balance} USDC</span></div>
             : <button style={S.connectBtn} onClick={connectWallet}>Connect Wallet</button>
           }
         </div>
@@ -345,7 +345,7 @@ export default function App() {
                     <div style={S.cardStats}>
                       <div style={S.cStat}><span style={S.cStatL}>Value</span><span style={S.cStatV}>{fmt(a.totalValue)}</span></div>
                       <div style={S.cStat}><span style={S.cStatL}>Token</span><span style={S.cStatV}>${a.tokenPrice}</span></div>
-                      <div style={S.cStat}><span style={S.cStatL}>APY</span><span style={{...S.cStatV,color:"#00C9A7"}}>{a.apy}%</span></div>
+                      <div style={S.cStat}><span style={S.cStatL}>APY</span><span style={{...S.cStatV,color:"#D4A843"}}>{a.apy}%</span></div>
                     </div>
                     <div style={S.progWrap}>
                       <div style={S.progBar}><div style={{...S.progFill, width:`${pct}%`, background:a.color}}/></div>
@@ -381,14 +381,14 @@ export default function App() {
               <div style={S.statsRow}>
                 <div style={S.statCard}><div style={S.statVal}>{fmt(totalInvested)}</div><div style={S.statLabel}>Total Invested</div></div>
                 <div style={S.statCard}><div style={S.statVal}>{portfolio.length}</div><div style={S.statLabel}>Assets Held</div></div>
-                <div style={S.statCard}><div style={{...S.statVal,color:"#00C9A7"}}>${monthlyEarn.toFixed(2)}</div><div style={S.statLabel}>Est. Monthly Income</div></div>
+                <div style={S.statCard}><div style={{...S.statVal,color:"#D4A843"}}>${monthlyEarn.toFixed(2)}</div><div style={S.statLabel}>Est. Monthly Income</div></div>
               </div>
               <div style={S.grid}>
                 {portfolio.map(p=>(
                   <div key={p.id} style={S.card}>
                     <div style={{...S.cardTop,background:`linear-gradient(135deg,${p.color}22,${p.color}08)`}}>
                       <span style={S.cardEmoji}>{p.image}</span>
-                      <span style={{...S.cardTag,background:"#00C9A733",color:"#00C9A7"}}>OWNED</span>
+                      <span style={{...S.cardTag,background:"#D4A84333",color:"#D4A843"}}>OWNED</span>
                     </div>
                     <div style={S.cardBody}>
                       <div style={S.cardCat}>{p.category}</div>
@@ -396,9 +396,9 @@ export default function App() {
                       <div style={S.cardStats}>
                         <div style={S.cStat}><span style={S.cStatL}>Invested</span><span style={S.cStatV}>${p.invested}</span></div>
                         <div style={S.cStat}><span style={S.cStatL}>Tokens</span><span style={S.cStatV}>{p.tokens.toLocaleString()}</span></div>
-                        <div style={S.cStat}><span style={S.cStatL}>APY</span><span style={{...S.cStatV,color:"#00C9A7"}}>{p.apy}%</span></div>
+                        <div style={S.cStat}><span style={S.cStatL}>APY</span><span style={{...S.cStatV,color:"#D4A843"}}>{p.apy}%</span></div>
                       </div>
-                      <div style={S.earnRow}>Monthly est: <span style={{color:"#00C9A7",fontWeight:700}}>${((p.invested*p.apy)/100/12).toFixed(2)} USDC</span></div>
+                      <div style={S.earnRow}>Monthly est: <span style={{color:"#D4A843",fontWeight:700}}>${((p.invested*p.apy)/100/12).toFixed(2)} USDC</span></div>
                       <a href={`${ARC_EXPLORER}/address/${wallet}`} target="_blank" rel="noreferrer" style={S.arcLink}>View on Arcscan ↗</a>
                     </div>
                   </div>
@@ -427,8 +427,8 @@ export default function App() {
                 {txLog.map((tx,i)=>(
                   <div key={i} style={S.txRow}>
                     <span style={S.txCell}>{tx.time}</span>
-                    <span style={{...S.txCell,color:"#E8EEF7",fontWeight:600}}>{tx.asset}</span>
-                    <span style={{...S.txCell,color:"#00C9A7",fontWeight:700}}>${tx.amount} USDC</span>
+                    <span style={{...S.txCell,color:"#EDF1F9",fontWeight:600}}>{tx.asset}</span>
+                    <span style={{...S.txCell,color:"#D4A843",fontWeight:700}}>${tx.amount} USDC</span>
                     <span style={S.txCell}>{tx.tokens.toLocaleString()}</span>
                     <span style={S.txCell}>{tx.wallet}</span>
                     <a href={`${ARC_EXPLORER}/tx/${tx.hash}`} target="_blank" rel="noreferrer" style={{...S.txCell,...S.arcLink}}>
@@ -561,7 +561,7 @@ export default function App() {
                     </button>
                 }
                 <div style={S.modalNote}>
-                  Need USDC? <a href={ARC_FAUCET} target="_blank" rel="noreferrer" style={{color:"#00C9A7"}}>Claim from Circle Faucet ↗</a>
+                  Need USDC? <a href={ARC_FAUCET} target="_blank" rel="noreferrer" style={{color:"#D4A843"}}>Claim from Circle Faucet ↗</a>
                 </div>
               </>
             )}
@@ -589,134 +589,134 @@ export default function App() {
 
 // ── Styles ────────────────────────────────────────────────────────────
 const S = {
-  root:      { minHeight:"100vh", background:"#060B13", color:"#E8EEF7", fontFamily:"'DM Sans','Outfit',sans-serif", position:"relative", overflowX:"hidden" },
+  root:      { minHeight:"100vh", background:"#0A0F1E", color:"#EDF1F9", fontFamily:"'DM Sans','Outfit',sans-serif", position:"relative", overflowX:"hidden" },
   canvas:    { position:"fixed", top:0, left:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 },
   toast:     { position:"fixed", top:80, right:20, zIndex:300, padding:"12px 20px", borderRadius:10, border:"1px solid", fontSize:14, fontWeight:600, backdropFilter:"blur(10px)" },
-  header:    { position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 28px", background:"rgba(6,11,19,0.93)", backdropFilter:"blur(16px)", borderBottom:"1px solid rgba(0,201,167,0.13)" },
+  header:    { position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 28px", background:"rgba(10,15,30,0.93)", backdropFilter:"blur(16px)", borderBottom:"1px solid rgba(212,168,67,0.13)" },
   logo:      { display:"flex", alignItems:"center", gap:12 },
-  logoMark:  { width:40, height:40, background:"linear-gradient(135deg,#00C9A7,#00B4D8)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" },
-  logoR:     { fontWeight:900, fontSize:18, color:"#060B13" },
-  logoTitle: { fontWeight:900, fontSize:16, color:"#E8EEF7", letterSpacing:0.5 },
-  logoSub:   { fontSize:10, color:"#6B7A99", marginTop:1 },
+  logoMark:  { width:40, height:40, background:"linear-gradient(135deg,#D4A843,#C49333)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" },
+  logoR:     { fontWeight:900, fontSize:18, color:"#0A0F1E" },
+  logoTitle: { fontWeight:900, fontSize:16, color:"#EDF1F9", letterSpacing:0.5 },
+  logoSub:   { fontSize:10, color:"#7A8BAA", marginTop:1 },
   nav:       { display:"flex", gap:4 },
-  navBtn:    { background:"transparent", border:"none", color:"#6B7A99", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"all 0.2s" },
-  navActive: { color:"#00C9A7", background:"rgba(0,201,167,0.1)" },
+  navBtn:    { background:"transparent", border:"none", color:"#7A8BAA", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600, transition:"all 0.2s" },
+  navActive: { color:"#D4A843", background:"rgba(212,168,67,0.1)" },
   hRight:    { display:"flex", alignItems:"center", gap:8 },
-  faucetBtn: { padding:"7px 13px", borderRadius:8, background:"rgba(0,201,167,0.1)", color:"#00C9A7", textDecoration:"none", fontSize:12, fontWeight:700, border:"1px solid rgba(0,201,167,0.25)" },
-  explorerBtn:{ padding:"7px 13px", borderRadius:8, background:"rgba(255,255,255,0.05)", color:"#9AAFC7", textDecoration:"none", fontSize:12, fontWeight:700, border:"1px solid rgba(255,255,255,0.08)" },
-  shareBtn:  { padding:"7px 13px", borderRadius:8, background:"rgba(29,161,242,0.1)", color:"#1DA1F2", fontSize:12, fontWeight:700, border:"1px solid rgba(29,161,242,0.25)", cursor:"pointer" },
-  wBadge:    { display:"flex", alignItems:"center", gap:8, padding:"7px 13px", borderRadius:8, background:"rgba(0,201,167,0.08)", border:"1px solid rgba(0,201,167,0.2)", fontSize:13, fontWeight:700 },
-  wDot:      { width:7, height:7, borderRadius:"50%", background:"#00C9A7" },
-  connectBtn:{ padding:"9px 18px", borderRadius:8, background:"linear-gradient(135deg,#00C9A7,#00B4D8)", color:"#060B13", fontWeight:800, fontSize:13, border:"none", cursor:"pointer" },
+  faucetBtn: { padding:"7px 13px", borderRadius:8, background:"rgba(212,168,67,0.1)", color:"#D4A843", textDecoration:"none", fontSize:12, fontWeight:700, border:"1px solid rgba(212,168,67,0.25)" },
+  explorerBtn:{ padding:"7px 13px", borderRadius:8, background:"rgba(255,255,255,0.05)", color:"#8A9FBF", textDecoration:"none", fontSize:12, fontWeight:700, border:"1px solid rgba(255,255,255,0.08)" },
+  shareBtn:  { padding:"7px 13px", borderRadius:8, background:"rgba(29,161,242,0.1)", color:"#4E9CD4", fontSize:12, fontWeight:700, border:"1px solid rgba(29,161,242,0.25)", cursor:"pointer" },
+  wBadge:    { display:"flex", alignItems:"center", gap:8, padding:"7px 13px", borderRadius:8, background:"rgba(212,168,67,0.08)", border:"1px solid rgba(212,168,67,0.2)", fontSize:13, fontWeight:700 },
+  wDot:      { width:7, height:7, borderRadius:"50%", background:"#D4A843" },
+  connectBtn:{ padding:"9px 18px", borderRadius:8, background:"linear-gradient(135deg,#D4A843,#C49333)", color:"#0A0F1E", fontWeight:800, fontSize:13, border:"none", cursor:"pointer" },
   chainBanner:{ background:"rgba(255,100,0,0.12)", borderBottom:"1px solid rgba(255,100,0,0.25)", color:"#FFB347", padding:"9px 28px", display:"flex", alignItems:"center", gap:14, fontSize:13, fontWeight:600, zIndex:99, position:"relative" },
   switchBtn: { padding:"5px 12px", borderRadius:6, background:"#FF6400", color:"#fff", border:"none", cursor:"pointer", fontWeight:700, fontSize:12 },
   main:      { position:"relative", zIndex:1, padding:"0 28px 60px" },
   hero:      { paddingTop:52, paddingBottom:16, maxWidth:840, margin:"0 auto", textAlign:"center" },
   compBadge: { display:"inline-block", padding:"5px 14px", borderRadius:20, background:"linear-gradient(135deg,rgba(255,200,0,0.15),rgba(255,150,0,0.1))", color:"#FFD700", fontSize:11, fontWeight:800, letterSpacing:1.5, marginBottom:18, border:"1px solid rgba(255,200,0,0.3)" },
-  heroH:     { fontSize:"clamp(30px,5vw,58px)", fontWeight:900, lineHeight:1.1, marginBottom:18, color:"#E8EEF7" },
-  accent:    { color:"#00C9A7" },
-  heroP:     { fontSize:16, color:"#6B7A99", lineHeight:1.65, maxWidth:580, margin:"0 auto 28px" },
+  heroH:     { fontSize:"clamp(30px,5vw,58px)", fontWeight:900, lineHeight:1.1, marginBottom:18, color:"#EDF1F9" },
+  accent:    { color:"#D4A843" },
+  heroP:     { fontSize:16, color:"#7A8BAA", lineHeight:1.65, maxWidth:580, margin:"0 auto 28px" },
   heroActions:{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap", marginBottom:36 },
-  btnPrimary:{ padding:"12px 26px", borderRadius:10, background:"linear-gradient(135deg,#00C9A7,#00B4D8)", color:"#060B13", fontWeight:800, fontSize:14, border:"none", cursor:"pointer" },
-  btnOutline:{ padding:"12px 26px", borderRadius:10, background:"rgba(255,255,255,0.04)", color:"#9AAFC7", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.1)", textDecoration:"none", display:"inline-block", cursor:"pointer" },
+  btnPrimary:{ padding:"12px 26px", borderRadius:10, background:"linear-gradient(135deg,#D4A843,#C49333)", color:"#0A0F1E", fontWeight:800, fontSize:14, border:"none", cursor:"pointer" },
+  btnOutline:{ padding:"12px 26px", borderRadius:10, background:"rgba(255,255,255,0.04)", color:"#8A9FBF", fontWeight:700, fontSize:14, border:"1px solid rgba(255,255,255,0.1)", textDecoration:"none", display:"inline-block", cursor:"pointer" },
   statsRow:  { display:"flex", gap:14, flexWrap:"wrap", justifyContent:"center", marginBottom:28 },
   statCard:  { flex:"1 1 150px", background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:12, padding:"14px 18px", textAlign:"center" },
-  statVal:   { fontSize:22, fontWeight:800, color:"#E8EEF7", display:"flex", alignItems:"center", justifyContent:"center", gap:6 },
-  liveDot:   { width:7, height:7, borderRadius:"50%", background:"#00C9A7", display:"inline-block" },
-  statLabel: { fontSize:12, color:"#6B7A99", marginTop:4, fontWeight:500 },
-  netBar:    { display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", background:"rgba(0,201,167,0.04)", border:"1px solid rgba(0,201,167,0.13)", borderRadius:12, padding:"10px 20px", marginBottom:26 },
+  statVal:   { fontSize:22, fontWeight:800, color:"#EDF1F9", display:"flex", alignItems:"center", justifyContent:"center", gap:6 },
+  liveDot:   { width:7, height:7, borderRadius:"50%", background:"#D4A843", display:"inline-block" },
+  statLabel: { fontSize:12, color:"#7A8BAA", marginTop:4, fontWeight:500 },
+  netBar:    { display:"flex", alignItems:"center", justifyContent:"center", flexWrap:"wrap", background:"rgba(212,168,67,0.04)", border:"1px solid rgba(212,168,67,0.13)", borderRadius:12, padding:"10px 20px", marginBottom:26 },
   netGroup:  { display:"flex", alignItems:"center" },
   netDiv:    { width:1, height:26, background:"rgba(255,255,255,0.07)", margin:"0 4px" },
   netItem:   { padding:"3px 14px", display:"flex", flexDirection:"column", alignItems:"center" },
-  netLabel:  { fontSize:10, color:"#6B7A99", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase" },
-  netVal:    { fontSize:13, color:"#E8EEF7", fontWeight:700, marginTop:2 },
-  netLink:   { padding:"3px 14px", fontSize:13, color:"#00C9A7", fontWeight:700, textDecoration:"none" },
+  netLabel:  { fontSize:10, color:"#7A8BAA", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase" },
+  netVal:    { fontSize:13, color:"#EDF1F9", fontWeight:700, marginTop:2 },
+  netLink:   { padding:"3px 14px", fontSize:13, color:"#D4A843", fontWeight:700, textDecoration:"none" },
   filterRow: { display:"flex", gap:8, marginBottom:22, flexWrap:"wrap" },
-  filterBtn: { padding:"7px 15px", borderRadius:20, border:"1px solid rgba(255,255,255,0.1)", background:"transparent", color:"#6B7A99", cursor:"pointer", fontSize:13, fontWeight:600 },
-  filterActive:{ background:"rgba(0,201,167,0.1)", color:"#00C9A7", borderColor:"rgba(0,201,167,0.3)" },
+  filterBtn: { padding:"7px 15px", borderRadius:20, border:"1px solid rgba(255,255,255,0.1)", background:"transparent", color:"#7A8BAA", cursor:"pointer", fontSize:13, fontWeight:600 },
+  filterActive:{ background:"rgba(212,168,67,0.1)", color:"#D4A843", borderColor:"rgba(212,168,67,0.3)" },
   grid:      { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(290px,1fr))", gap:18 },
   card:      { background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:16, overflow:"hidden", cursor:"pointer", transition:"transform 0.2s,border-color 0.2s" },
   cardTop:   { height:96, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 18px" },
   cardEmoji: { fontSize:38 },
   cardTag:   { padding:"3px 9px", borderRadius:6, fontSize:10, fontWeight:800, letterSpacing:1 },
   cardBody:  { padding:"14px 18px 18px" },
-  cardCat:   { fontSize:10, color:"#6B7A99", fontWeight:700, letterSpacing:1, marginBottom:3 },
-  cardName:  { fontSize:15, fontWeight:800, color:"#E8EEF7", marginBottom:5 },
-  cardLoc:   { fontSize:11, color:"#6B7A99", marginBottom:7 },
-  cardDesc:  { fontSize:12, color:"#6B7A99", lineHeight:1.5, marginBottom:12 },
+  cardCat:   { fontSize:10, color:"#7A8BAA", fontWeight:700, letterSpacing:1, marginBottom:3 },
+  cardName:  { fontSize:15, fontWeight:800, color:"#EDF1F9", marginBottom:5 },
+  cardLoc:   { fontSize:11, color:"#7A8BAA", marginBottom:7 },
+  cardDesc:  { fontSize:12, color:"#7A8BAA", lineHeight:1.5, marginBottom:12 },
   cardStats: { display:"flex", gap:10, marginBottom:12 },
   cStat:     { flex:1, display:"flex", flexDirection:"column" },
-  cStatL:    { fontSize:10, color:"#6B7A99", fontWeight:600, marginBottom:2 },
-  cStatV:    { fontSize:14, fontWeight:800, color:"#E8EEF7" },
+  cStatL:    { fontSize:10, color:"#7A8BAA", fontWeight:600, marginBottom:2 },
+  cStatV:    { fontSize:14, fontWeight:800, color:"#EDF1F9" },
   progWrap:  { marginBottom:12 },
   progBar:   { height:3, background:"rgba(255,255,255,0.07)", borderRadius:4, marginBottom:5 },
   progFill:  { height:"100%", borderRadius:4 },
-  progLabel: { fontSize:10, color:"#6B7A99", fontWeight:600 },
-  investBtn: { width:"100%", padding:"10px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:800, fontSize:14, color:"#060B13" },
+  progLabel: { fontSize:10, color:"#7A8BAA", fontWeight:600 },
+  investBtn: { width:"100%", padding:"10px", borderRadius:8, border:"none", cursor:"pointer", fontWeight:800, fontSize:14, color:"#0A0F1E" },
   section:   { paddingTop:36 },
-  sTitle:    { fontSize:26, fontWeight:900, color:"#E8EEF7", marginBottom:8 },
-  subTxt:    { fontSize:14, color:"#6B7A99", marginBottom:24 },
+  sTitle:    { fontSize:26, fontWeight:900, color:"#EDF1F9", marginBottom:8 },
+  subTxt:    { fontSize:14, color:"#7A8BAA", marginBottom:24 },
   empty:     { textAlign:"center", padding:"70px 20px", display:"flex", flexDirection:"column", alignItems:"center", gap:14 },
   emptyIcon: { fontSize:52 },
-  emptyTxt:  { fontSize:17, color:"#6B7A99" },
-  earnRow:   { fontSize:13, color:"#9AAFC7", marginBottom:10 },
-  arcLink:   { fontSize:13, color:"#00C9A7", textDecoration:"none", fontWeight:700 },
+  emptyTxt:  { fontSize:17, color:"#7A8BAA" },
+  earnRow:   { fontSize:13, color:"#8A9FBF", marginBottom:10 },
+  arcLink:   { fontSize:13, color:"#D4A843", textDecoration:"none", fontWeight:700 },
   txTable:   { background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, overflow:"hidden" },
-  txHead:    { display:"grid", gridTemplateColumns:"100px 1fr 120px 100px 110px 140px", padding:"12px 18px", background:"rgba(0,201,167,0.06)", fontSize:11, fontWeight:700, color:"#6B7A99", letterSpacing:0.8, gap:10 },
+  txHead:    { display:"grid", gridTemplateColumns:"100px 1fr 120px 100px 110px 140px", padding:"12px 18px", background:"rgba(212,168,67,0.06)", fontSize:11, fontWeight:700, color:"#7A8BAA", letterSpacing:0.8, gap:10 },
   txRow:     { display:"grid", gridTemplateColumns:"100px 1fr 120px 100px 110px 140px", padding:"12px 18px", borderTop:"1px solid rgba(255,255,255,0.05)", gap:10, alignItems:"center" },
-  txCell:    { fontSize:13, color:"#9AAFC7" },
-  builderCard:{ display:"flex", gap:24, background:"linear-gradient(135deg,rgba(0,201,167,0.08),rgba(0,180,216,0.05))", border:"1px solid rgba(0,201,167,0.2)", borderRadius:16, padding:"24px", marginBottom:28, flexWrap:"wrap" },
+  txCell:    { fontSize:13, color:"#8A9FBF" },
+  builderCard:{ display:"flex", gap:24, background:"linear-gradient(135deg,rgba(212,168,67,0.08),rgba(196,147,51,0.05))", border:"1px solid rgba(212,168,67,0.2)", borderRadius:16, padding:"24px", marginBottom:28, flexWrap:"wrap" },
   builderLeft:{ flex:"1 1 280px" },
   builderBadge:{ display:"inline-block", padding:"4px 12px", borderRadius:20, background:"rgba(255,200,0,0.12)", color:"#FFD700", fontSize:11, fontWeight:800, letterSpacing:1, marginBottom:10, border:"1px solid rgba(255,200,0,0.2)" },
-  builderTitle:{ fontSize:28, fontWeight:900, color:"#E8EEF7", marginBottom:10 },
-  builderDesc:{ fontSize:14, color:"#9AAFC7", lineHeight:1.65, marginBottom:14 },
+  builderTitle:{ fontSize:28, fontWeight:900, color:"#EDF1F9", marginBottom:10 },
+  builderDesc:{ fontSize:14, color:"#8A9FBF", lineHeight:1.65, marginBottom:14 },
   builderMeta:{ display:"flex", gap:10, flexWrap:"wrap" },
-  builderMetaItem:{ padding:"4px 12px", borderRadius:20, background:"rgba(255,255,255,0.06)", color:"#9AAFC7", fontSize:12, fontWeight:600 },
+  builderMetaItem:{ padding:"4px 12px", borderRadius:20, background:"rgba(255,255,255,0.06)", color:"#8A9FBF", fontSize:12, fontWeight:600 },
   builderRight:{ flex:"1 1 220px", display:"flex", flexDirection:"column", justifyContent:"center", gap:8 },
-  builderWalletLabel:{ fontSize:11, color:"#6B7A99", fontWeight:700, letterSpacing:0.8 },
-  builderWallet:{ fontSize:12, color:"#00C9A7", fontFamily:"monospace", wordBreak:"break-all", fontWeight:700 },
+  builderWalletLabel:{ fontSize:11, color:"#7A8BAA", fontWeight:700, letterSpacing:0.8 },
+  builderWallet:{ fontSize:12, color:"#D4A843", fontFamily:"monospace", wordBreak:"break-all", fontWeight:700 },
   aboutGrid: { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))", gap:14, marginBottom:32 },
   aboutCard: { background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"22px 18px" },
   aboutIcon: { fontSize:30, marginBottom:10 },
-  aboutCardTitle:{ fontSize:15, fontWeight:800, color:"#E8EEF7", marginBottom:8 },
-  aboutCardText:{ fontSize:13, color:"#6B7A99", lineHeight:1.6 },
-  linksTitle:{ fontSize:18, fontWeight:800, color:"#E8EEF7", marginBottom:14 },
+  aboutCardTitle:{ fontSize:15, fontWeight:800, color:"#EDF1F9", marginBottom:8 },
+  aboutCardText:{ fontSize:13, color:"#7A8BAA", lineHeight:1.6 },
+  linksTitle:{ fontSize:18, fontWeight:800, color:"#EDF1F9", marginBottom:14 },
   linksGrid: { display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:28 },
-  linkCard:  { display:"flex", alignItems:"center", gap:14, background:"rgba(0,201,167,0.04)", border:"1px solid rgba(0,201,167,0.13)", borderRadius:12, padding:"14px 18px", textDecoration:"none" },
+  linkCard:  { display:"flex", alignItems:"center", gap:14, background:"rgba(212,168,67,0.04)", border:"1px solid rgba(212,168,67,0.13)", borderRadius:12, padding:"14px 18px", textDecoration:"none" },
   linkIcon:  { fontSize:26 },
-  linkName:  { fontSize:14, fontWeight:700, color:"#E8EEF7", marginBottom:3 },
-  linkDesc:  { fontSize:12, color:"#6B7A99" },
+  linkName:  { fontSize:14, fontWeight:700, color:"#EDF1F9", marginBottom:3 },
+  linkDesc:  { fontSize:12, color:"#7A8BAA" },
   contractBox:{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.08)", borderRadius:14, padding:"20px 22px" },
-  contractTitle:{ fontSize:14, fontWeight:700, color:"#E8EEF7", marginBottom:8 },
-  contractAddr:{ fontFamily:"monospace", fontSize:14, color:"#00C9A7", wordBreak:"break-all", marginBottom:8 },
-  contractNote:{ fontSize:12, color:"#6B7A99", marginBottom:10 },
+  contractTitle:{ fontSize:14, fontWeight:700, color:"#EDF1F9", marginBottom:8 },
+  contractAddr:{ fontFamily:"monospace", fontSize:14, color:"#D4A843", wordBreak:"break-all", marginBottom:8 },
+  contractNote:{ fontSize:12, color:"#7A8BAA", marginBottom:10 },
   overlay:   { position:"fixed", inset:0, zIndex:200, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(6px)", display:"flex", alignItems:"center", justifyContent:"center", padding:20 },
-  modal:     { background:"#0C1320", border:"1px solid rgba(0,201,167,0.22)", borderRadius:20, padding:"28px", width:"100%", maxWidth:480, position:"relative", maxHeight:"90vh", overflowY:"auto" },
-  modalClose:{ position:"absolute", top:14, right:14, background:"rgba(255,255,255,0.07)", border:"none", color:"#9AAFC7", width:28, height:28, borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:700 },
+  modal:     { background:"#0F1628", border:"1px solid rgba(212,168,67,0.22)", borderRadius:20, padding:"28px", width:"100%", maxWidth:480, position:"relative", maxHeight:"90vh", overflowY:"auto" },
+  modalClose:{ position:"absolute", top:14, right:14, background:"rgba(255,255,255,0.07)", border:"none", color:"#8A9FBF", width:28, height:28, borderRadius:6, cursor:"pointer", fontSize:13, fontWeight:700 },
   modalHdr:  { display:"flex", gap:14, alignItems:"flex-start", marginBottom:18 },
   modalEmoji:{ fontSize:42 },
-  modalCat:  { fontSize:10, color:"#6B7A99", fontWeight:700, letterSpacing:1 },
-  modalName: { fontSize:19, fontWeight:800, color:"#E8EEF7", marginBottom:3 },
-  modalLoc:  { fontSize:12, color:"#6B7A99" },
+  modalCat:  { fontSize:10, color:"#7A8BAA", fontWeight:700, letterSpacing:1 },
+  modalName: { fontSize:19, fontWeight:800, color:"#EDF1F9", marginBottom:3 },
+  modalLoc:  { fontSize:12, color:"#7A8BAA" },
   modalStats:{ display:"flex", gap:8, marginBottom:14, flexWrap:"wrap" },
   mStat:     { flex:"1 1 90px", background:"rgba(255,255,255,0.04)", borderRadius:10, padding:"10px", textAlign:"center" },
-  mStatL:    { fontSize:10, color:"#6B7A99", fontWeight:600, marginBottom:3 },
-  mStatV:    { fontSize:14, fontWeight:800, color:"#E8EEF7" },
-  modalDesc: { fontSize:13, color:"#6B7A99", lineHeight:1.6, marginBottom:18 },
+  mStatL:    { fontSize:10, color:"#7A8BAA", fontWeight:600, marginBottom:3 },
+  mStatV:    { fontSize:14, fontWeight:800, color:"#EDF1F9" },
+  modalDesc: { fontSize:13, color:"#7A8BAA", lineHeight:1.6, marginBottom:18 },
   inputGrp:  { marginBottom:14 },
-  inputLabel:{ display:"block", fontSize:13, color:"#9AAFC7", fontWeight:600, marginBottom:7 },
-  input:     { width:"100%", padding:"12px 13px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.11)", color:"#E8EEF7", fontSize:16, outline:"none", boxSizing:"border-box" },
-  inputHint: { fontSize:12, color:"#00C9A7", marginTop:7, fontWeight:600 },
-  modalBtn:  { width:"100%", padding:"13px", borderRadius:10, background:"linear-gradient(135deg,#00C9A7,#00B4D8)", color:"#060B13", fontWeight:800, fontSize:15, border:"none", cursor:"pointer", marginBottom:10 },
-  modalNote: { textAlign:"center", fontSize:12, color:"#6B7A99" },
-  successBox:{ textAlign:"center", padding:"24px 16px", background:"rgba(0,201,167,0.08)", borderRadius:14, border:"1px solid rgba(0,201,167,0.25)" },
+  inputLabel:{ display:"block", fontSize:13, color:"#8A9FBF", fontWeight:600, marginBottom:7 },
+  input:     { width:"100%", padding:"12px 13px", borderRadius:10, background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.11)", color:"#EDF1F9", fontSize:16, outline:"none", boxSizing:"border-box" },
+  inputHint: { fontSize:12, color:"#D4A843", marginTop:7, fontWeight:600 },
+  modalBtn:  { width:"100%", padding:"13px", borderRadius:10, background:"linear-gradient(135deg,#D4A843,#C49333)", color:"#0A0F1E", fontWeight:800, fontSize:15, border:"none", cursor:"pointer", marginBottom:10 },
+  modalNote: { textAlign:"center", fontSize:12, color:"#7A8BAA" },
+  successBox:{ textAlign:"center", padding:"24px 16px", background:"rgba(212,168,67,0.08)", borderRadius:14, border:"1px solid rgba(212,168,67,0.25)" },
   successIcon:{ fontSize:40, marginBottom:8 },
-  successTitle:{ fontSize:18, fontWeight:800, color:"#E8EEF7", marginBottom:6 },
-  successSub:{ fontSize:13, color:"#9AAFC7", marginBottom:12 },
+  successTitle:{ fontSize:18, fontWeight:800, color:"#EDF1F9", marginBottom:6 },
+  successSub:{ fontSize:13, color:"#8A9FBF", marginBottom:12 },
   footer:    { position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"center", padding:"18px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", marginTop:40, flexWrap:"wrap", gap:12 },
-  footerLogo:{ fontSize:15, fontWeight:900, color:"#00C9A7", marginBottom:3 },
-  footerSub: { fontSize:11, color:"#6B7A99" },
-  footerWallet:{ fontSize:10, color:"#6B7A99", fontFamily:"monospace", marginTop:3 },
+  footerLogo:{ fontSize:15, fontWeight:900, color:"#D4A843", marginBottom:3 },
+  footerSub: { fontSize:11, color:"#7A8BAA" },
+  footerWallet:{ fontSize:10, color:"#7A8BAA", fontFamily:"monospace", marginTop:3 },
   footerLinks:{ display:"flex", gap:18, alignItems:"center" },
-  footerLink:{ fontSize:13, color:"#6B7A99", textDecoration:"none", fontWeight:600 },
+  footerLink:{ fontSize:13, color:"#7A8BAA", textDecoration:"none", fontWeight:600 },
 };
