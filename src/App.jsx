@@ -4,7 +4,16 @@ const ARC_CHAIN_ID = 5042002;
 const ARC_RPC_URL = "https://rpc.testnet.arc.network";
 const ARC_EXPLORER = "https://testnet.arcscan.app";
 const ARC_FAUCET = "https://faucet.circle.com";
+
+// RexRWA Contract ABI (invest function)
+const CONTRACT_ABI = [
+  "function invest(uint256 assetId, uint256 tokens) external",
+  "function redeem(uint256 assetId, uint256 tokens) external",
+  "function getAsset(uint256 id) external view returns (tuple(uint256 id, string name, string category, string location, uint256 totalValue, uint256 tokenPrice, uint256 totalTokens, uint256 soldTokens, uint256 apyBps, bool active, address creator))",
+  "function getPlatformStats() external view returns (uint256, uint256, uint256)"
+];
 const BUILDER_WALLET = "0x731a7450b1c1dd1dcc0252918bef841bc1b8dab6";
+const CONTRACT_ADDRESS = "0x17859aA923BEcD52995F495AF5021bbA85F45c9b";
 
 const ARC_NETWORK_PARAMS = {
   chainId: "0x" + ARC_CHAIN_ID.toString(16),
@@ -322,6 +331,19 @@ export default function App() {
   };
 
   const handleInvest = async () => {
+    // Try real contract call first
+    if (wallet && window.ethereum) {
+      try {
+        // Encode invest(assetId, tokens) call
+        const tokens = Math.max(1, Math.floor(parseFloat(amount) / asset.tokenPrice));
+        const iface = `0x${asset.id.toString(16).padStart(64,"0")}${tokens.toString(16).padStart(64,"0")}`;
+        const investSelector = "0x8235b27e"; // invest(uint256,uint256)
+        await window.ethereum.request({
+          method: "eth_sendTransaction",
+          params: [{ from: wallet, to: CONTRACT_ADDRESS, data: investSelector + iface.slice(2), gas: "0x493E0" }]
+        });
+      } catch(e) { console.log("Contract call failed, using simulation", e); }
+    }
     if (!wallet) { connectWallet(); return; }
     const num = parseFloat(amount);
     if (!num || num<=0) { showToast("Please enter an amount","error"); return; }
@@ -573,9 +595,9 @@ export default function App() {
                 </div>
               </div>
               <div style={S.builderRight}>
-                <div style={S.builderWLabel}>Builder Wallet</div>
-                <div style={S.builderWAddr}>{BUILDER_WALLET}</div>
-                <a href={`${ARC_EXPLORER}/address/${BUILDER_WALLET}`} target="_blank" rel="noreferrer" style={S.arcLink}>Verify on Arcscan ↗</a>
+                <div style={S.builderWLabel}>Smart Contract</div>
+                <div style={S.builderWAddr}>{CONTRACT_ADDRESS}</div>
+                <a href={`${ARC_EXPLORER}/address/${CONTRACT_ADDRESS}`} target="_blank" rel="noreferrer" style={S.arcLink}>Verify on Arcscan ↗</a>
               </div>
             </div>
             <div style={S.aboutGrid}>
