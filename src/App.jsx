@@ -676,7 +676,7 @@ export default function App() {
         <div>
           <div style={S.footerLogo}>Rex-RWA</div>
           <div style={S.footerSub}>Real World Asset Tokenization · Arc Testnet</div>
-          <div style={S.footerWallet}>Builder: {BUILDER_WALLET}</div>
+          <div style={S.footerPowered}><span style={S.footerPoweredItem}>⚡ Powered by Arc</span><span style={S.footerDot}> · </span><span style={S.footerPoweredItem}>💵 Circle USDC</span><span style={S.footerDot}> · </span><span style={S.footerPoweredItem}>⛓️ Chain ID 5042002</span></div>
         </div>
         <div style={S.footerLinks}>
           <a href={ARC_EXPLORER} target="_blank" rel="noreferrer" style={S.footerLink}>Arcscan</a>
@@ -834,7 +834,7 @@ const S = {
   footer:     { position:"relative", zIndex:1, display:"flex", justifyContent:"space-between", alignItems:"center", padding:"20px 32px", borderTop:"1px solid rgba(255,255,255,0.06)", marginTop:40, flexWrap:"wrap", gap:12 },
   footerLogo: { fontSize:16, fontWeight:900, color:"#D4A843", marginBottom:3 },
   footerSub:  { fontSize:11, color:"#7A8BAA" },
-  footerWallet:{ fontSize:10, color:"#7A8BAA", fontFamily:"monospace", marginTop:3 },
+  footerPowered:{ display:"flex", alignItems:"center", gap:6, marginTop:4, flexWrap:"wrap" }, footerPoweredItem:{ fontSize:11, color:"#7A8BAA", fontWeight:600 }, footerDot:{ color:"rgba(255,255,255,0.2)", fontSize:11 },
   footerLinks:{ display:"flex", gap:18, alignItems:"center" },
   footerLink: { fontSize:13, color:"#7A8BAA", textDecoration:"none", fontWeight:600 },
 };
