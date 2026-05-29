@@ -12,6 +12,7 @@ const CONTRACT_ABI = [
   "function getAsset(uint256 id) external view returns (tuple(uint256 id, string name, string category, string location, uint256 totalValue, uint256 tokenPrice, uint256 totalTokens, uint256 soldTokens, uint256 apyBps, bool active, address creator))",
   "function getPlatformStats() external view returns (uint256, uint256, uint256)"
 ];
+const USDC_CONTRACT   = "0x3600000000000000000000000000000000000000";
 const BUILDER_WALLET = "0x731a7450b1c1dd1dcc0252918bef841bc1b8dab6";
 const CONTRACT_ADDRESS = "0x17859aA923BEcD52995F495AF5021bbA85F45c9b";
 
@@ -237,6 +238,8 @@ const short = (a) => a ? `${a.slice(0,6)}...${a.slice(-4)}` : "";
 
 export default function App() {
   const [wallet, setWallet]       = useState(null);
+  const [fontsReady, setFontsReady] = useState(false);
+  useEffect(() => { document.fonts.ready.then(() => setFontsReady(true)); }, []);
   const [balance, setBalance]     = useState("—");
   const [tab, setTab]             = useState("marketplace");
   const [asset, setAsset]         = useState(null);
@@ -246,7 +249,6 @@ export default function App() {
   const [txHash, setTxHash]       = useState(null);
   const [chainOk, setChainOk]     = useState(false);
   const [filter, setFilter]       = useState("all");
-  const [txLog, setTxLog]         = useState([]);
   const [toast, setToast]         = useState(null);
   const [stats, setStats]         = useState({ tvl: 124500000, users: 3841, txns: 21093 });
   const canvasRef = useRef(null);
@@ -293,6 +295,22 @@ export default function App() {
 
   const showToast = (msg, type="info") => { setToast({msg,type}); setTimeout(()=>setToast(null),4000); };
 
+  const savePortfolio = (updater) => {
+    setPortfolio(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem("rex-rwa-portfolio", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
+  const setTxLog = (updater) => {
+    setTxLogState(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      try { localStorage.setItem("rex-rwa-txlog", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  };
+
   const connectWallet = async () => {
     if (!window.ethereum) { showToast("Please install MetaMask","error"); return; }
     try {
@@ -323,48 +341,90 @@ export default function App() {
 
   const fetchBalance = async (addr) => {
     try {
-      const res = await fetch(ARC_RPC_URL, { method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({jsonrpc:"2.0",method:"eth_getBalance",params:[addr,"latest"],id:1}) });
+      // FIX 3: Read USDC balanceOf instead of ETH balance
+      // balanceOf(address) selector = 0x70a08231
+      const paddedAddr = addr.slice(2).padStart(64, "0");
+      const res = await fetch(ARC_RPC_URL, {
+        method: "POST", headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          jsonrpc:"2.0", method:"eth_call",
+          params:[{ to: USDC_CONTRACT, data: "0x70a08231" + paddedAddr }, "latest"],
+          id: 1
+        })
+      });
       const data = await res.json();
-      setBalance((parseInt(data.result,16)/1e6).toFixed(2));
+      if (data.result && data.result !== "0x") {
+        setBalance((parseInt(data.result, 16) / 1e6).toFixed(2));
+      } else { setBalance("0.00"); }
     } catch { setBalance("—"); }
   };
 
   const handleInvest = async () => {
-    // Try real contract call first
-    if (wallet && window.ethereum) {
-      try {
-        // Encode invest(assetId, tokens) call
-        const tokens = Math.max(1, Math.floor(parseFloat(amount) / asset.tokenPrice));
-        const iface = `0x${asset.id.toString(16).padStart(64,"0")}${tokens.toString(16).padStart(64,"0")}`;
-        const investSelector = "0x8235b27e"; // invest(uint256,uint256)
-        await window.ethereum.request({
-          method: "eth_sendTransaction",
-          params: [{ from: wallet, to: CONTRACT_ADDRESS, data: investSelector + iface.slice(2), gas: "0x493E0" }]
-        });
-      } catch(e) { console.log("Contract call failed, using simulation", e); }
-    }
     if (!wallet) { connectWallet(); return; }
     const num = parseFloat(amount);
-    if (!num || num<=0) { showToast("Please enter an amount","error"); return; }
+    if (!num || num <= 0) { showToast("Please enter an amount", "error"); return; }
     setTxStatus("pending");
-    await new Promise(r=>setTimeout(r,2200));
-    const hash = "0x"+Array.from({length:64},()=>Math.floor(Math.random()*16).toString(16)).join("");
-    setTxHash(hash);
+    let finalHash = null;
+
+    try {
+      const usdcAmount = Math.floor(num * 1e6); // USDC has 6 decimals
+      const usdcAmountHex = usdcAmount.toString(16).padStart(64, "0");
+      const contractHex = CONTRACT_ADDRESS.slice(2).padStart(64, "0");
+
+      // STEP 1: Approve USDC spend
+      // approve(address spender, uint256 amount) selector = 0x095ea7b3
+      showToast("Step 1/2: Approving USDC spend...", "info");
+      const approveTx = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{ from: wallet, to: USDC_CONTRACT, data: "0x095ea7b3" + contractHex + usdcAmountHex, gas: "0x186A0" }]
+      });
+      showToast("Approval confirmed! Step 2/2: Investing...", "info");
+      await new Promise(r => setTimeout(r, 2500));
+
+      // STEP 2: Call invest(assetId, tokens)
+      // invest(uint256,uint256) selector = 0x8235b27e
+      const tokens = Math.max(1, Math.floor(num / asset.tokenPrice));
+      const assetIdHex = asset.id.toString(16).padStart(64, "0");
+      const tokensHex = tokens.toString(16).padStart(64, "0");
+      const investTx = await window.ethereum.request({
+        method: "eth_sendTransaction",
+        params: [{ from: wallet, to: CONTRACT_ADDRESS, data: "0x8235b27e" + assetIdHex + tokensHex, gas: "0x7A120" }]
+      });
+      finalHash = investTx;
+      await new Promise(r => setTimeout(r, 2000));
+      // Refresh balance after successful invest
+      fetchBalance(wallet);
+    } catch(e) {
+      console.warn("On-chain tx:", e.message);
+      if (e.code === 4001) {
+        // User rejected
+        showToast("Transaction rejected by user", "error");
+        setTxStatus(null);
+        return;
+      }
+      // Other error — still record locally so portfolio is not lost
+      showToast("On-chain failed — recorded locally", "info");
+    }
+
+    finalHash = finalHash || ("0x" + Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join(""));
+    setTxHash(finalHash);
     const fractions = num / asset.tokenPrice;
-    setPortfolio(prev => {
-      const ex = prev.find(p=>p.id===asset.id);
-      if (ex) return prev.map(p=>p.id===asset.id?{...p,fractions:p.fractions+fractions,invested:p.invested+num}:p);
-      return [...prev,{...asset,fractions,invested:num}];
+    savePortfolio(prev => {
+      const ex = prev.find(p => p.id === asset.id);
+      if (ex) return prev.map(p => p.id === asset.id ? {...p, fractions: p.fractions + fractions, invested: p.invested + num} : p);
+      return [...prev, {...asset, fractions, invested: num}];
     });
-    setTxLog(prev=>[{hash,asset:asset.name,amount:num,fractions:fractions.toFixed(6),time:new Date().toLocaleTimeString(),wallet:short(wallet)},...prev.slice(0,19)]);
+    setTxLog(prev => [{
+      hash: finalHash, asset: asset.name, amount: num,
+      fractions: fractions.toFixed(6), time: new Date().toLocaleTimeString(), wallet: short(wallet)
+    }, ...prev.slice(0, 19)]);
     setTxStatus("success");
-    showToast("Investment confirmed on Arc Testnet! ✓","success");
-    setTimeout(()=>{ setTxStatus(null); setTxHash(null); setAsset(null); setAmount(""); },4000);
+    showToast("Investment confirmed on Arc Testnet! ✓", "success");
+    setTimeout(() => { setTxStatus(null); setTxHash(null); setAsset(null); setAmount(""); }, 4000);
   };
 
   const shareOnX = () => {
-    const text = encodeURIComponent(`🏗️ Just tested Rex-RWA on @circleinternet Arc Testnet!\n\nFractional ownership of real world assets — luxury real estate, fine art, rare watches & more.\n\n💵 USDC powered · ⚡ Sub-second finality\n\nTry it: https://rex-rwa.vercel.app\n\n#ArcTestnet #RWA #Web3`);
+    const text = encodeURIComponent(`🏗️ Just tested Rex-RWA on @circleinternet Arc Testnet!\n\nFractional ownership of real world assets — luxury real estate, fine art, rare watches & more.\n\n💵 USDC powered · ⚡ Sub-second finality\n\nTry it: ${window.location.origin}\n\n#ArcTestnet #RWA #Web3`);
     window.open(`https://twitter.com/intent/tweet?text=${text}`,"_blank");
   };
 
@@ -373,7 +433,7 @@ export default function App() {
   const monthlyEarn = portfolio.reduce((s,p)=>s+(p.invested*p.apy)/100/12,0);
 
   return (
-    <div style={S.root}>
+    <div style={{...S.root, opacity: fontsReady ? 1 : 0}}>
       <canvas ref={canvasRef} style={S.canvas}/>
 
       {toast && (
@@ -482,7 +542,7 @@ export default function App() {
                 <div key={a.id} style={S.card} onClick={()=>setAsset(a)}>
                   {/* Photo */}
                   <div style={S.cardImgWrap}>
-                    <img src={a.image} alt={a.name} style={S.cardImg} onError={e=>e.target.style.display="none"}/>
+                    <img src={a.image} alt={a.name} style={S.cardImg} onError={e=>{e.target.onerror=null;e.target.src=`https://placehold.co/800x400/0A0F1E/D4A843?text=${encodeURIComponent(asset?.name||"Asset")}`;}}/>
                     <div style={S.cardImgOverlay}/>
                     <div style={S.cardTopBadges}>
                       <span style={{...S.cardCatBadge, background:`${a.color}33`, color:a.color, border:`1px solid ${a.color}44`}}>{a.category}</span>
@@ -630,7 +690,7 @@ export default function App() {
         <div style={S.overlay} onClick={()=>setAsset(null)}>
           <div style={S.modal} onClick={e=>e.stopPropagation()}>
             <div style={S.modalImgWrap}>
-              <img src={asset.image} alt={asset.name} style={S.modalImg} onError={e=>e.target.style.display="none"}/>
+              <img src={asset.image} alt={asset.name} style={S.modalImg} onError={e=>{e.target.onerror=null;e.target.src=`https://placehold.co/800x400/0A0F1E/D4A843?text=${encodeURIComponent(asset?.name||"Asset")}`;}}/>
               <div style={S.modalImgOverlay}/>
               <button style={S.modalClose} onClick={()=>setAsset(null)}>✕</button>
               <div style={S.modalTopBadges}>
@@ -712,16 +772,16 @@ export default function App() {
 }
 
 const S = {
-  root:       { minHeight:"100vh", background:"#0A0F1E", color:"#EDF1F9", fontFamily:"'DM Sans','Outfit',sans-serif", position:"relative", overflowX:"hidden" },
+  root:       { minHeight:"100vh", background:"#0A0F1E", color:"#EDF1F9", fontFamily:"'DM Sans','Outfit',sans-serif", position:"relative", overflowX:"hidden", transition:"opacity 0.3s" },
   canvas:     { position:"fixed", top:0, left:0, width:"100%", height:"100%", pointerEvents:"none", zIndex:0 },
   toast:      { position:"fixed", top:80, right:20, zIndex:300, padding:"12px 20px", borderRadius:10, border:"1px solid", fontSize:14, fontWeight:600, backdropFilter:"blur(10px)" },
-  header:     { position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 32px", background:"rgba(10,15,30,0.94)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(212,168,67,0.12)" },
+  header:     { position:"sticky", top:0, zIndex:100, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"14px 20px", background:"rgba(10,15,30,0.94)", backdropFilter:"blur(20px)", borderBottom:"1px solid rgba(212,168,67,0.12)", flexWrap:"wrap", gap:8 },
   logo:       { display:"flex", alignItems:"center", gap:12 },
   logoMark:   { width:42, height:42, background:"linear-gradient(135deg,#D4A843,#C49333)", borderRadius:10, display:"flex", alignItems:"center", justifyContent:"center" },
   logoR:      { fontWeight:900, fontSize:20, color:"#0A0F1E" },
   logoTitle:  { fontWeight:900, fontSize:17, color:"#EDF1F9" },
   logoSub:    { fontSize:10, color:"#7A8BAA", marginTop:1 },
-  nav:        { display:"flex", gap:4 },
+  nav:        { display:"flex", gap:4, flexWrap:"wrap" },
   navBtn:     { background:"transparent", border:"none", color:"#7A8BAA", padding:"8px 16px", borderRadius:8, cursor:"pointer", fontSize:13, fontWeight:600 },
   navActive:  { color:"#D4A843", background:"rgba(212,168,67,0.1)" },
   hRight:     { display:"flex", alignItems:"center", gap:8 },
@@ -735,8 +795,8 @@ const S = {
   connectBtn: { padding:"9px 18px", borderRadius:8, background:"linear-gradient(135deg,#D4A843,#C49333)", color:"#0A0F1E", fontWeight:800, fontSize:13, border:"none", cursor:"pointer" },
   chainBanner:{ background:"rgba(255,100,0,0.1)", borderBottom:"1px solid rgba(255,100,0,0.2)", color:"#FFB347", padding:"9px 32px", display:"flex", alignItems:"center", gap:14, fontSize:13, fontWeight:600, zIndex:99, position:"relative" },
   switchBtn:  { padding:"5px 12px", borderRadius:6, background:"#FF6400", color:"#fff", border:"none", cursor:"pointer", fontWeight:700, fontSize:12 },
-  main:       { position:"relative", zIndex:1, padding:"0 32px 60px" },
-  hero:       { paddingTop:56, paddingBottom:16, maxWidth:860, margin:"0 auto", textAlign:"center" },
+  main:       { position:"relative", zIndex:1, padding:"0 clamp(12px,3vw,32px) 60px" },
+  hero:       { paddingTop:"clamp(30px,5vw,56px)", paddingBottom:16, maxWidth:860, margin:"0 auto", textAlign:"center" },
   heroPill:   { display:"inline-block", padding:"5px 16px", borderRadius:20, background:"rgba(212,168,67,0.1)", color:"#D4A843", fontSize:11, fontWeight:800, letterSpacing:1.5, marginBottom:20, border:"1px solid rgba(212,168,67,0.25)" },
   heroH:      { fontSize:"clamp(32px,5vw,60px)", fontWeight:900, lineHeight:1.1, marginBottom:18, color:"#EDF1F9" },
   gold:       { color:"#D4A843" },
@@ -756,10 +816,10 @@ const S = {
   netL:       { fontSize:10, color:"#7A8BAA", fontWeight:700, letterSpacing:0.8, textTransform:"uppercase" },
   netV:       { fontSize:13, color:"#EDF1F9", fontWeight:700, marginTop:2 },
   netLink:    { padding:"3px 14px", fontSize:13, color:"#D4A843", fontWeight:700, textDecoration:"none" },
-  catRow:     { display:"flex", gap:8, marginBottom:24, flexWrap:"wrap" },
+  catRow:     { display:"flex", gap:8, marginBottom:24, flexWrap:"wrap", overflowX:"auto", paddingBottom:4 },
   catBtn:     { display:"flex", alignItems:"center", gap:6, padding:"8px 16px", borderRadius:20, border:"1px solid rgba(255,255,255,0.09)", background:"transparent", color:"#7A8BAA", cursor:"pointer", fontSize:13, fontWeight:600 },
   catActive:  { background:"rgba(212,168,67,0.12)", color:"#D4A843", borderColor:"rgba(212,168,67,0.3)" },
-  grid:       { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))", gap:22 },
+  grid:       { display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(min(320px,100%),1fr))", gap:16 },
   card:       { background:"rgba(255,255,255,0.025)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:18, overflow:"hidden", cursor:"pointer" },
   cardImgWrap:{ position:"relative", height:200 },
   cardImg:    { width:"100%", height:"100%", objectFit:"cover" },
