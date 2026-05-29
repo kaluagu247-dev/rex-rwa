@@ -315,9 +315,17 @@ export default function App() {
     if (!window.ethereum) { showToast("Please install MetaMask","error"); return; }
     try {
       const accounts = await window.ethereum.request({ method:"eth_requestAccounts" });
-      setWallet(accounts[0]);
+      const addr = accounts[0];
+      setWallet(addr);
       await switchToArc();
-      fetchBalance(accounts[0]);
+      fetchBalance(addr);
+      // Load this wallet's portfolio and tx history
+      try {
+        const savedPortfolio = localStorage.getItem("rex-rwa-portfolio-" + addr.toLowerCase());
+        if (savedPortfolio) savePortfolio(() => JSON.parse(savedPortfolio));
+        const savedTxLog = localStorage.getItem("rex-rwa-txlog-" + addr.toLowerCase());
+        if (savedTxLog) setTxLog(() => JSON.parse(savedTxLog));
+      } catch {}
       showToast("Wallet connected to Arc Testnet ✓","success");
     } catch { showToast("Connection cancelled","error"); }
   };
@@ -363,64 +371,88 @@ export default function App() {
     if (!wallet) { connectWallet(); return; }
     const num = parseFloat(amount);
     if (!num || num <= 0) { showToast("Please enter an amount", "error"); return; }
+
     setTxStatus("pending");
     let finalHash = null;
+    let onChainSuccess = false;
 
     try {
-      const usdcAmount = Math.floor(num * 1e6); // USDC has 6 decimals
+      const usdcAmount = Math.floor(num * 1e6);
       const usdcAmountHex = usdcAmount.toString(16).padStart(64, "0");
       const contractHex = CONTRACT_ADDRESS.slice(2).padStart(64, "0");
 
-      // STEP 1: Approve USDC spend
-      // approve(address spender, uint256 amount) selector = 0x095ea7b3
-      showToast("Step 1/2: Approving USDC spend...", "info");
-      const approveTx = await window.ethereum.request({
+      // Step 1: Approve USDC
+      showToast("Step 1/2: Approve USDC in your wallet...", "info");
+      await window.ethereum.request({
         method: "eth_sendTransaction",
-        params: [{ from: wallet, to: USDC_CONTRACT, data: "0x095ea7b3" + contractHex + usdcAmountHex, gas: "0x186A0" }]
+        params: [{ from: wallet, to: USDC_CONTRACT, data: "0x095ea7b3" + contractHex + usdcAmountHex, gas: "0x30D40" }]
       });
-      showToast("Approval confirmed! Step 2/2: Investing...", "info");
-      await new Promise(r => setTimeout(r, 2500));
 
-      // STEP 2: Call invest(assetId, tokens)
-      // invest(uint256,uint256) selector = 0x8235b27e
+      // Step 2: Invest
+      showToast("Step 2/2: Confirm investment in your wallet...", "info");
       const tokens = Math.max(1, Math.floor(num / asset.tokenPrice));
       const assetIdHex = asset.id.toString(16).padStart(64, "0");
       const tokensHex = tokens.toString(16).padStart(64, "0");
-      const investTx = await window.ethereum.request({
+      const investTxHash = await window.ethereum.request({
         method: "eth_sendTransaction",
         params: [{ from: wallet, to: CONTRACT_ADDRESS, data: "0x8235b27e" + assetIdHex + tokensHex, gas: "0x7A120" }]
       });
-      finalHash = investTx;
-      await new Promise(r => setTimeout(r, 2000));
-      // Refresh balance after successful invest
+      finalHash = investTxHash;
+      onChainSuccess = true;
       fetchBalance(wallet);
+
     } catch(e) {
-      console.warn("On-chain tx:", e.message);
-      if (e.code === 4001) {
-        // User rejected
-        showToast("Transaction rejected by user", "error");
+      if (e.code === 4001 || e.message?.includes("rejected") || e.message?.includes("denied")) {
+        showToast("Transaction rejected — nothing was recorded", "error");
         setTxStatus(null);
         return;
       }
-      // Other error — still record locally so portfolio is not lost
-      showToast("On-chain failed — recorded locally", "info");
+      // Network/contract error — record locally with simulated hash
+      showToast("Network issue — recorded locally", "info");
     }
 
-    finalHash = finalHash || ("0x" + Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join(""));
-    setTxHash(finalHash);
+    // Generate hash if on-chain failed
+    if (!finalHash) {
+      finalHash = "0x" + Array.from({length:64}, () => Math.floor(Math.random()*16).toString(16)).join("");
+    }
+
     const fractions = num / asset.tokenPrice;
+    const newTx = {
+      hash: finalHash,
+      asset: asset.name,
+      category: asset.category,
+      amount: num,
+      fractions: fractions.toFixed(6),
+      apy: asset.apy,
+      time: new Date().toLocaleString(),
+      wallet: short(wallet),
+      onChain: onChainSuccess,
+      explorer: ARC_EXPLORER + "/tx/" + finalHash,
+    };
+
+    // Save portfolio keyed by wallet address so each wallet keeps its own data
+    const portfolioKey = "rex-rwa-portfolio-" + wallet.toLowerCase();
+    const txKey = "rex-rwa-txlog-" + wallet.toLowerCase();
+
     savePortfolio(prev => {
       const ex = prev.find(p => p.id === asset.id);
-      if (ex) return prev.map(p => p.id === asset.id ? {...p, fractions: p.fractions + fractions, invested: p.invested + num} : p);
-      return [...prev, {...asset, fractions, invested: num}];
+      const next = ex
+        ? prev.map(p => p.id === asset.id ? {...p, fractions: p.fractions + fractions, invested: p.invested + num} : p)
+        : [...prev, {...asset, fractions, invested: num}];
+      try { localStorage.setItem(portfolioKey, JSON.stringify(next)); } catch {}
+      return next;
     });
-    setTxLog(prev => [{
-      hash: finalHash, asset: asset.name, amount: num,
-      fractions: fractions.toFixed(6), time: new Date().toLocaleTimeString(), wallet: short(wallet)
-    }, ...prev.slice(0, 19)]);
+
+    setTxLog(prev => {
+      const next = [newTx, ...prev.slice(0, 49)];
+      try { localStorage.setItem(txKey, JSON.stringify(next)); } catch {}
+      return next;
+    });
+
+    setTxHash(finalHash);
     setTxStatus("success");
-    showToast("Investment confirmed on Arc Testnet! ✓", "success");
-    setTimeout(() => { setTxStatus(null); setTxHash(null); setAsset(null); setAmount(""); }, 4000);
+    showToast(onChainSuccess ? "Investment confirmed on Arc! ✓" : "Investment recorded locally ✓", "success");
+    setTimeout(() => { setTxStatus(null); setTxHash(null); setAsset(null); setAmount(""); }, 5000);
   };
 
   const shareOnX = () => {
@@ -631,9 +663,22 @@ export default function App() {
               <div style={S.txWrap}>
                 {txLog.map((tx,i)=>(
                   <div key={i} style={S.txRow}>
-                    <div style={S.txLeft}><div style={S.txAsset}>{tx.asset}</div><div style={S.txMeta}>{tx.time} · {tx.wallet}</div></div>
-                    <div style={S.txRight}><div style={S.txAmount}>${tx.amount} USDC</div><div style={S.txFrac}>{tx.fractions} fractions</div></div>
-                    <a href={`${ARC_EXPLORER}/tx/${tx.hash}`} target="_blank" rel="noreferrer" style={S.txHash}>{tx.hash.slice(0,14)}...↗</a>
+                    <div style={S.txLeft}>
+                      <div style={S.txAsset}>{tx.asset}</div>
+                      <div style={S.txMeta}>{tx.time} · {tx.wallet}</div>
+                    </div>
+                    <div style={S.txRight}>
+                      <div style={S.txAmount}>${tx.amount} USDC</div>
+                      <div style={S.txFrac}>{tx.fractions} fractions</div>
+                    </div>
+                    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+                      <a href={`${ARC_EXPLORER}/tx/${tx.hash}`} target="_blank" rel="noreferrer" style={S.txHash}>{tx.hash.slice(0,10)}...↗</a>
+                      <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:10,
+                        background: tx.onChain ? "rgba(34,197,94,0.15)" : "rgba(212,168,67,0.15)",
+                        color: tx.onChain ? "#22C55E" : "#D4A843"}}>
+                        {tx.onChain ? "✓ On-Chain" : "Local"}
+                      </span>
+                    </div>
                   </div>
                 ))}
               </div>
