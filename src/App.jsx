@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 // ── Arc Testnet Config ─────────────────────────────────────────────
 const ARC_CHAIN_ID     = 5042002;
 const ARC_CHAIN_HEX    = "0x" + ARC_CHAIN_ID.toString(16);
-const ARC_RPC          = "https://rpc.testnet.arc.network";
+const ARC_RPC          = "https://arc-testnet.drpc.org";
 const ARC_EXPLORER     = "https://testnet.arcscan.app";
 const ARC_FAUCET       = "https://faucet.circle.com";
 const USDC_CONTRACT    = "0x3600000000000000000000000000000000000000";
@@ -27,7 +27,8 @@ const hexAddr   = (a) => a.slice(2).padStart(64, "0");
 const SEL_BALANCE_OF  = "0x70a08231"; // balanceOf(address)
 const SEL_ALLOWANCE   = "0xdd62ed3e"; // allowance(address,address)
 const SEL_APPROVE     = "0x095ea7b3"; // approve(address,uint256)
-const SEL_INVEST      = "0x441a3e70"; // invest(uint256,string,uint256)
+// invest(uint256,uint256) keccak256 selector
+const SEL_INVEST      = "0x9f676e25"; // invest(uint256,uint256)
                                        // keccak256("invest(uint256,string,uint256)") first 4 bytes
 
 // ── Assets ─────────────────────────────────────────────────────────
@@ -228,11 +229,11 @@ export default function App() {
           wallet,
           USDC_CONTRACT,
           SEL_APPROVE + hexAddr(CONTRACT_ADDRESS) + pad64(micro),
-          "0x186A0"
+          "0x30D40"
         );
         if (!approveTx) throw new Error("Approval rejected");
-        setStepMsg("Approval sent! Waiting 3 seconds...");
-        await new Promise(r => setTimeout(r, 3000));
+        setStepMsg("Approval confirmed! Preparing investment...");
+        await new Promise(r => setTimeout(r, 5000));
       }
 
       // ── Step 2: Invest ───────────────────────────────────────
@@ -245,7 +246,7 @@ export default function App() {
       const usdcAmountHex = pad64(micro);
       const investData    = "0x9f676e25" + assetIdHex + usdcAmountHex;
 
-      const investTx = await sendTx(wallet, CONTRACT_ADDRESS, investData, "0x7A120");
+      const investTx = await sendTx(wallet, CONTRACT_ADDRESS, investData, "0xF4240");
       if (!investTx) throw new Error("Investment rejected");
 
       setLastTxHash(investTx);
@@ -335,7 +336,10 @@ export default function App() {
               <button style={S.disconnectBtn} onClick={disconnect} title="Disconnect">✕</button>
             </div>
           ) : (
-            <button style={S.connectBtn} onClick={connect}>Connect Wallet</button>
+            <div style={{display:"flex",gap:6}}>
+              <button style={S.connectBtn} onClick={connect}>Connect Wallet</button>
+              <a href={`https://metamask.app.link/dapp/${window.location.host}`} style={{...S.connectBtn, background:"rgba(212,168,67,0.15)", color:"#D4A843", textDecoration:"none", fontSize:11, padding:"8px 10px"}} target="_blank" rel="noreferrer">MetaMask</a>
+            </div>
           )}
         </div>
       </header>
