@@ -18,7 +18,7 @@ const ARC_NETWORK = {
 };
 
 // ── USDC helpers ───────────────────────────────────────────────────
-const toMicro   = (n) => Math.floor(parseFloat(n) * 1e18); // Arc native USDC = 18 decimals
+const toMicro   = (n) => Math.floor(parseFloat(n) * 1e6); // USDC ERC-20 = 6 decimals
 const fromMicro = (n) => (parseInt(n, 16) / 1e6).toFixed(2);
 const pad64     = (n) => n.toString(16).padStart(64, "0");
 const hexAddr   = (a) => a.slice(2).padStart(64, "0");
@@ -75,19 +75,28 @@ const rpcCall = async (method, params) => {
 // Get USDC balance
 const getUSDCBalance = async (addr) => {
   try {
-    // Arc: USDC is native token, use eth_getBalance
-    // Native USDC uses 18 decimals on Arc
-    const result = await rpcCall("eth_getBalance", [addr, "latest"]);
+    // Use ERC-20 balanceOf - 6 decimals
+    const result = await rpcCall("eth_call", [{
+      to: USDC_CONTRACT,
+      data: SEL_BALANCE_OF + hexAddr(addr)
+    }, "latest"]);
     if (!result || result === "0x") return "0.00";
-    return (parseInt(result, 16) / 1e18).toFixed(2);
-  } catch { return "0.00"; }
+    return (parseInt(result, 16) / 1e6).toFixed(2);
+  } catch {
+    // Fallback: native balance 18 decimals
+    try {
+      const result = await rpcCall("eth_getBalance", [addr, "latest"]);
+      if (!result || result === "0x") return "0.00";
+      return (parseInt(result, 16) / 1e18).toFixed(2);
+    } catch { return "0.00"; }
+  }
 };
 
 // Get USDC allowance
 
 // Send transaction
 const getProvider = () => window.ethereum || window.okxwallet || window.web3?.currentProvider;
-const sendTx = (from, to, data, gas="0x30D40") =>
+const sendTx = (from, to, data, gas="0x186A0") =>
   getProvider().request({ method:"eth_sendTransaction", params:[{from, to, data, gas}] });
 
 // ── App ────────────────────────────────────────────────────────────
@@ -171,31 +180,63 @@ export default function App() {
   };
 
   const connect = async () => {
-    // Support MetaMask, OKX, and other injected wallets
-    const provider = window.ethereum || window.okxwallet || window.web3?.currentProvider;
+    // Detect provider - works for MetaMask, OKX, Rabby, and all injected wallets
+    let provider = null;
+    if (window.ethereum) {
+      provider = window.ethereum;
+    } else if (window.okxwallet) {
+      provider = window.okxwallet;
+    } else if (window.web3?.currentProvider) {
+      provider = window.web3.currentProvider;
+    }
+
     if (!provider) {
-      showToast("Please open in MetaMask or OKX wallet browser","error");
+      showToast("No wallet found. Open this site inside your OKX or MetaMask browser.", "error");
       return;
     }
-    try {
-      // Request accounts first
-      const accounts = await provider.request({method:"eth_requestAccounts"});
-      if (!accounts || accounts.length === 0) { showToast("No accounts found","error"); return; }
 
-      // Switch to Arc Testnet
+    try {
+      // Step 1: Request accounts
+      let accounts;
       try {
-        await provider.request({method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN_HEX}]});
+        accounts = await provider.request({ method: "eth_requestAccounts" });
       } catch(e) {
-        if (e.code===4902 || e.code===-32603) {
-          await provider.request({method:"wallet_addEthereumChain", params:[ARC_NETWORK]});
+        if (e.code === 4001) { showToast("You rejected the connection", "error"); return; }
+        throw e;
+      }
+
+      if (!accounts || accounts.length === 0) {
+        showToast("No accounts returned from wallet", "error");
+        return;
+      }
+
+      // Step 2: Add Arc Testnet if not present
+      try {
+        await provider.request({
+          method: "wallet_switchEthereumChain",
+          params: [{ chainId: ARC_CHAIN_HEX }]
+        });
+      } catch(e) {
+        if (e.code === 4902 || e.code === -32603 || e.message?.includes("Unrecognized")) {
+          try {
+            await provider.request({
+              method: "wallet_addEthereumChain",
+              params: [ARC_NETWORK]
+            });
+          } catch(e2) {
+            showToast("Could not add Arc Testnet to wallet", "error");
+            return;
+          }
         }
       }
+
       setChainOk(true);
       await loadWallet(accounts[0]);
-      showToast("Connected to Arc Testnet ✓","success");
+      showToast("Connected to Arc Testnet ✓", "success");
+
     } catch(e) {
-      if (e.code === 4001) { showToast("Connection rejected","error"); return; }
-      showToast("Could not connect — try opening in your wallet browser","error");
+      console.error("Connect error:", e);
+      showToast("Connection failed: " + (e.message || "Unknown error"), "error");
     }
   };
 
@@ -215,27 +256,31 @@ export default function App() {
     const fractions = num / asset.tokenPrice;
 
     try {
-      // ── Single step: Send native USDC directly ─────────────
-      // On Arc, USDC is the native token (like ETH on Ethereum)
-      // No approve needed - just send value directly to contract
+      // ── Send USDC via ERC-20 transfer to contract ───────────
+      // Use ERC-20 transfer(address,uint256) - most reliable on Arc
+      // transfer(address,uint256) selector = 0xa9059cbb
+      // This sends USDC directly to the contract address
       setStep("investing");
-      setStepMsg("Confirm investment in your wallet...");
+      setStepMsg("Confirm USDC transfer in your wallet...");
 
-      // invest(uint256 assetId) selector = 0xb6b55f25
-      // Send USDC as native value (msg.value)
-      const investData = "0xb6b55f25" + pad64(asset.id);
       const provider = window.ethereum || window.okxwallet || window.web3?.currentProvider;
+
+      // Encode transfer(CONTRACT_ADDRESS, amount)
+      // 6 decimals for ERC-20 USDC interface on Arc
+      const usdcAmount6 = Math.floor(parseFloat(amount) * 1e6);
+      const transferData = "0xa9059cbb" + hexAddr(CONTRACT_ADDRESS) + pad64(usdcAmount6);
+
       const investTx = await provider.request({
         method: "eth_sendTransaction",
         params: [{
           from: wallet,
-          to: CONTRACT_ADDRESS,
-          data: investData,
-          value: "0x" + micro.toString(16),
-          gas: "0x30D40"
+          to: USDC_CONTRACT,
+          data: transferData,
+          gas: "0x186A0"
         }]
       });
-      if (!investTx) throw new Error("Investment rejected");
+
+      if (!investTx) throw new Error("Transfer rejected");
       setLastTxHash(investTx);
 
       // ── Step 3: Save locally ─────────────────────────────────
