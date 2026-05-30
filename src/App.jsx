@@ -7,7 +7,7 @@ const ARC_RPC          = "https://rpc.testnet.arc.network";
 const ARC_EXPLORER     = "https://testnet.arcscan.app";
 const ARC_FAUCET       = "https://faucet.circle.com";
 const USDC_CONTRACT    = "0x3600000000000000000000000000000000000000";
-const CONTRACT_ADDRESS = "0xCc453Dd137f231E7Fedc24F68fDE3d2E516cA2A4";
+const CONTRACT_ADDRESS = "0x01B4D00b3157DE9008744C9e46682e25655451de";
 
 const ARC_NETWORK = {
   chainId: ARC_CHAIN_HEX,
@@ -88,8 +88,9 @@ const getUSDCAllowance = async (owner, spender) => {
 };
 
 // Send transaction
+const getProvider = () => window.ethereum || window.okxwallet || window.web3?.currentProvider;
 const sendTx = (from, to, data, gas="0x30D40") =>
-  window.ethereum.request({ method:"eth_sendTransaction", params:[{from, to, data, gas}] });
+  getProvider().request({ method:"eth_sendTransaction", params:[{from, to, data, gas}] });
 
 // ── App ────────────────────────────────────────────────────────────
 export default function App() {
@@ -172,20 +173,31 @@ export default function App() {
   };
 
   const connect = async () => {
-    if (!window.ethereum) { showToast("Please install MetaMask or use a Web3 browser","error"); return; }
+    // Support MetaMask, OKX, and other injected wallets
+    const provider = window.ethereum || window.okxwallet || window.web3?.currentProvider;
+    if (!provider) {
+      showToast("Please open in MetaMask or OKX wallet browser","error");
+      return;
+    }
     try {
-      // Ensure Arc Testnet
+      // Request accounts first
+      const accounts = await provider.request({method:"eth_requestAccounts"});
+      if (!accounts || accounts.length === 0) { showToast("No accounts found","error"); return; }
+
+      // Switch to Arc Testnet
       try {
-        await window.ethereum.request({method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN_HEX}]});
+        await provider.request({method:"wallet_switchEthereumChain", params:[{chainId:ARC_CHAIN_HEX}]});
       } catch(e) {
-        if (e.code===4902) await window.ethereum.request({method:"wallet_addEthereumChain", params:[ARC_NETWORK]});
+        if (e.code===4902 || e.code===-32603) {
+          await provider.request({method:"wallet_addEthereumChain", params:[ARC_NETWORK]});
+        }
       }
       setChainOk(true);
-      const accounts = await window.ethereum.request({method:"eth_requestAccounts"});
       await loadWallet(accounts[0]);
       showToast("Connected to Arc Testnet ✓","success");
     } catch(e) {
-      if (e.code !== 4001) showToast("Could not connect wallet","error");
+      if (e.code === 4001) { showToast("Connection rejected","error"); return; }
+      showToast("Could not connect — try opening in your wallet browser","error");
     }
   };
 
@@ -227,16 +239,11 @@ export default function App() {
       setStep("investing");
       setStepMsg("Step 2/2 — Confirm investment in your wallet...");
 
-      // Encode invest(uint256 assetId, string assetName, uint256 usdcAmount)
-      // Function selector for invest(uint256,string,uint256)
+      // Encode invest(uint256 assetId, uint256 usdcAmount)
+      // keccak256("invest(uint256,uint256)") first 4 bytes = 0x9f676e25
       const assetIdHex    = pad64(asset.id);
       const usdcAmountHex = pad64(micro);
-      // String encoding: offset (64 bytes), length, then data padded to 32 bytes
-      const nameBytes     = new TextEncoder().encode(asset.name);
-      const nameLen       = pad64(nameBytes.length);
-      const nameHex       = Array.from(nameBytes).map(b => b.toString(16).padStart(2,"0")).join("").padEnd(64,"0");
-      const strOffset     = pad64(96); // offset to string = 3 * 32 bytes
-      const investData    = "0x441a3e70" + assetIdHex + strOffset + usdcAmountHex + nameLen + nameHex;
+      const investData    = "0x9f676e25" + assetIdHex + usdcAmountHex;
 
       const investTx = await sendTx(wallet, CONTRACT_ADDRESS, investData, "0x7A120");
       if (!investTx) throw new Error("Investment rejected");
