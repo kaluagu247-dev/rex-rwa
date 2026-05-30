@@ -218,34 +218,27 @@ export default function App() {
     const fractions = num / asset.tokenPrice;
 
     try {
-      // ── Step 1: Check allowance ──────────────────────────────
+      // ── Step 1: Approve USDC ────────────────────────────────
       setStep("approving");
-      setStepMsg("Checking USDC allowance...");
-      const allowance = await getUSDCAllowance(wallet, CONTRACT_ADDRESS);
+      setStepMsg("Step 1/2 — Approve USDC in your wallet...");
 
-      if (allowance < micro) {
-        setStepMsg("Step 1/2 — Approve USDC in your wallet...");
-        const approveTx = await sendTx(
-          wallet,
-          USDC_CONTRACT,
-          SEL_APPROVE + hexAddr(CONTRACT_ADDRESS) + pad64(micro),
-          "0x30D40"
-        );
-        if (!approveTx) throw new Error("Approval rejected");
-        setStepMsg("Approval confirmed! Preparing investment...");
-        await new Promise(r => setTimeout(r, 5000));
-      }
+      const approveTx = await sendTx(
+        wallet,
+        USDC_CONTRACT,
+        SEL_APPROVE + hexAddr(CONTRACT_ADDRESS) + pad64(micro),
+        "0x30D40"
+      );
+      if (!approveTx) throw new Error("Approval rejected");
 
-      // ── Step 2: Invest ───────────────────────────────────────
+      setStepMsg("Approved! Waiting for confirmation...");
+      await new Promise(r => setTimeout(r, 4000));
+
+      // ── Step 2: Call invest on contract ─────────────────────
       setStep("investing");
       setStepMsg("Step 2/2 — Confirm investment in your wallet...");
 
-      // Encode invest(uint256 assetId, uint256 usdcAmount)
-      // keccak256("invest(uint256,uint256)") first 4 bytes = 0x9f676e25
-      const assetIdHex    = pad64(asset.id);
-      const usdcAmountHex = pad64(micro);
-      const investData    = "0x9f676e25" + assetIdHex + usdcAmountHex;
-
+      // invest(uint256,uint256) selector = 0x9f676e25
+      const investData = "0x9f676e25" + pad64(asset.id) + pad64(micro);
       const investTx = await sendTx(wallet, CONTRACT_ADDRESS, investData, "0xF4240");
       if (!investTx) throw new Error("Investment rejected");
 
@@ -336,10 +329,7 @@ export default function App() {
               <button style={S.disconnectBtn} onClick={disconnect} title="Disconnect">✕</button>
             </div>
           ) : (
-            <div style={{display:"flex",gap:6}}>
-              <button style={S.connectBtn} onClick={connect}>Connect Wallet</button>
-              <a href={`https://metamask.app.link/dapp/${window.location.host}`} style={{...S.connectBtn, background:"rgba(212,168,67,0.15)", color:"#D4A843", textDecoration:"none", fontSize:11, padding:"8px 10px"}} target="_blank" rel="noreferrer">MetaMask</a>
-            </div>
+            <button style={S.connectBtn} onClick={connect}>Connect Wallet</button>
           )}
         </div>
       </header>
