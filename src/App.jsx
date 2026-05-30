@@ -7,7 +7,7 @@ const ARC_RPC          = "https://arc-testnet.drpc.org";
 const ARC_EXPLORER     = "https://testnet.arcscan.app";
 const ARC_FAUCET       = "https://faucet.circle.com";
 const USDC_CONTRACT    = "0x3600000000000000000000000000000000000000";
-const CONTRACT_ADDRESS = "0x01B4D00b3157DE9008744C9e46682e25655451de";
+const CONTRACT_ADDRESS = "0x9c12Cbd16db390Ea3354e637195EECEc80E62aA5";
 
 const ARC_NETWORK = {
   chainId: ARC_CHAIN_HEX,
@@ -18,7 +18,7 @@ const ARC_NETWORK = {
 };
 
 // ── USDC helpers ───────────────────────────────────────────────────
-const toMicro   = (n) => Math.floor(parseFloat(n) * 1e6);
+const toMicro   = (n) => Math.floor(parseFloat(n) * 1e18); // Arc native USDC = 18 decimals
 const fromMicro = (n) => (parseInt(n, 16) / 1e6).toFixed(2);
 const pad64     = (n) => n.toString(16).padStart(64, "0");
 const hexAddr   = (a) => a.slice(2).padStart(64, "0");
@@ -75,18 +75,15 @@ const rpcCall = async (method, params) => {
 // Get USDC balance
 const getUSDCBalance = async (addr) => {
   try {
-    const result = await rpcCall("eth_call", [{ to: USDC_CONTRACT, data: SEL_BALANCE_OF + hexAddr(addr) }, "latest"]);
-    return (parseInt(result, 16) / 1e6).toFixed(2);
+    // Arc: USDC is native token, use eth_getBalance
+    // Native USDC uses 18 decimals on Arc
+    const result = await rpcCall("eth_getBalance", [addr, "latest"]);
+    if (!result || result === "0x") return "0.00";
+    return (parseInt(result, 16) / 1e18).toFixed(2);
   } catch { return "0.00"; }
 };
 
 // Get USDC allowance
-const getUSDCAllowance = async (owner, spender) => {
-  try {
-    const result = await rpcCall("eth_call", [{ to: USDC_CONTRACT, data: SEL_ALLOWANCE + hexAddr(owner) + hexAddr(spender) }, "latest"]);
-    return parseInt(result, 16);
-  } catch { return 0; }
-};
 
 // Send transaction
 const getProvider = () => window.ethereum || window.okxwallet || window.web3?.currentProvider;
@@ -218,30 +215,27 @@ export default function App() {
     const fractions = num / asset.tokenPrice;
 
     try {
-      // ── Step 1: Approve USDC ────────────────────────────────
-      setStep("approving");
-      setStepMsg("Step 1/2 — Approve USDC in your wallet...");
-
-      const approveTx = await sendTx(
-        wallet,
-        USDC_CONTRACT,
-        SEL_APPROVE + hexAddr(CONTRACT_ADDRESS) + pad64(micro),
-        "0x30D40"
-      );
-      if (!approveTx) throw new Error("Approval rejected");
-
-      setStepMsg("Approved! Waiting for confirmation...");
-      await new Promise(r => setTimeout(r, 4000));
-
-      // ── Step 2: Call invest on contract ─────────────────────
+      // ── Single step: Send native USDC directly ─────────────
+      // On Arc, USDC is the native token (like ETH on Ethereum)
+      // No approve needed - just send value directly to contract
       setStep("investing");
-      setStepMsg("Step 2/2 — Confirm investment in your wallet...");
+      setStepMsg("Confirm investment in your wallet...");
 
-      // invest(uint256,uint256) selector = 0x9f676e25
-      const investData = "0x9f676e25" + pad64(asset.id) + pad64(micro);
-      const investTx = await sendTx(wallet, CONTRACT_ADDRESS, investData, "0xF4240");
+      // invest(uint256 assetId) selector = 0xb6b55f25
+      // Send USDC as native value (msg.value)
+      const investData = "0xb6b55f25" + pad64(asset.id);
+      const provider = window.ethereum || window.okxwallet || window.web3?.currentProvider;
+      const investTx = await provider.request({
+        method: "eth_sendTransaction",
+        params: [{
+          from: wallet,
+          to: CONTRACT_ADDRESS,
+          data: investData,
+          value: "0x" + micro.toString(16),
+          gas: "0x30D40"
+        }]
+      });
       if (!investTx) throw new Error("Investment rejected");
-
       setLastTxHash(investTx);
 
       // ── Step 3: Save locally ─────────────────────────────────
