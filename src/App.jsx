@@ -59,8 +59,22 @@ const ASSETS = [
 // ── Helpers ────────────────────────────────────────────────────────
 const fmt    = (n) => n >= 1e9 ? `$${(n/1e9).toFixed(2)}B` : n >= 1e6 ? `$${(n/1e6).toFixed(2)}M` : `$${n.toLocaleString()}`;
 const short  = (a) => a ? `${a.slice(0,6)}...${a.slice(-4)}` : "";
+// Storage: localStorage as primary + cross-browser sync via wallet address key
+// Normalize wallet address to always lowercase to avoid case mismatch
+const walletKey  = (addr, type) => (type + "-" + addr.toLowerCase());
 const stored = (key, fallback=[]) => { try { const v=localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; } };
 const store  = (key, val) => { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} };
+
+// Also store in sessionStorage as backup
+const storeAll = (key, val) => {
+  store(key, val);
+  try { sessionStorage.setItem(key, JSON.stringify(val)); } catch {}
+};
+const storedAll = (key, fallback=[]) => {
+  const ls = stored(key, null);
+  if (ls !== null) return ls;
+  try { const v = sessionStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+};
 
 // RPC call helper
 const rpcCall = async (method, params) => {
@@ -162,7 +176,7 @@ export default function App() {
     if (!window.ethereum) return;
     const handler = (accounts) => {
       if (accounts.length === 0) { disconnect(); }
-      else if (accounts[0] !== wallet) { loadWallet(accounts[0]); }
+      else if (accounts[0].toLowerCase() !== wallet) { loadWallet(accounts[0]); }
     };
     window.ethereum.on("accountsChanged", handler);
     return () => window.ethereum.removeListener("accountsChanged", handler);
@@ -171,12 +185,18 @@ export default function App() {
   const showToast = (msg, type="info") => { setToast({msg,type}); setTimeout(()=>setToast(null),5000); };
 
   const loadWallet = async (addr) => {
-    setWallet(addr);
-    const bal = await getUSDCBalance(addr);
+    // Always normalize to lowercase - same address regardless of wallet app
+    const normalAddr = addr.toLowerCase();
+    setWallet(normalAddr);
+    const bal = await getUSDCBalance(normalAddr);
     setBalance(bal);
-    // Load this wallet's data
-    setPortfolio(stored("rxp-" + addr.toLowerCase(), []));
-    setTxLog(stored("rxt-" + addr.toLowerCase(), []));
+    // Load this wallet data - check both old and new keys for backward compat
+    const pKey = walletKey(normalAddr, "rxp");
+    const tKey = walletKey(normalAddr, "rxt");
+    const portfolio = storedAll(pKey, []);
+    const txlog = storedAll(tKey, []);
+    setPortfolio(portfolio);
+    setTxLog(txlog);
   };
 
   const connect = async () => {
@@ -241,8 +261,11 @@ export default function App() {
   };
 
   const disconnect = () => {
-    setWallet(null); setBalance("0.00"); setChainOk(false);
-    setPortfolio([]); setTxLog([]);
+    setWallet(null);
+    setBalance("0.00");
+    setChainOk(false);
+    setPortfolio([]);
+    setTxLog([]);
     showToast("Wallet disconnected","info");
   };
 
@@ -295,13 +318,13 @@ export default function App() {
         const next = ex
           ? prev.map(p => p.id===asset.id ? {...p,fractions:p.fractions+fractions,invested:p.invested+num} : p)
           : [...prev, {...asset, fractions, invested:num}];
-        store("rxp-" + wallet.toLowerCase(), next);
+        storeAll(walletKey(wallet, "rxp"), next);
         return next;
       });
 
       setTxLog(prev => {
         const next = [newTx, ...prev.slice(0,49)];
-        store("rxt-" + wallet.toLowerCase(), next);
+        storeAll(walletKey(wallet, "rxt"), next);
         return next;
       });
 
