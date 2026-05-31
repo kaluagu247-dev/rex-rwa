@@ -86,6 +86,47 @@ const rpcCall = async (method, params) => {
   return data.result;
 };
 
+// Load portfolio from Arcscan blockchain API
+// This syncs across ALL browsers and wallet apps automatically
+const loadPortfolioFromChain = async (addr) => {
+  try {
+    const url = `https://testnet.arcscan.app/api/v2/addresses/${addr}/token-transfers?type=ERC-20&filter=from`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (!data.items || data.items.length === 0) return null;
+
+    // Filter transfers TO our contract
+    const invested = data.items.filter(tx =>
+      tx.to?.hash?.toLowerCase() === CONTRACT_ADDRESS.toLowerCase() &&
+      tx.token?.address?.toLowerCase() === USDC_CONTRACT.toLowerCase() &&
+      tx.tx_status === "ok"
+    );
+
+    if (invested.length === 0) return null;
+
+    // Build transactions list
+    const txList = invested.map(tx => {
+      const amount = parseInt(tx.total?.value || "0") / 1e6;
+      // Try to match asset from input data - default to asset 1 if unknown
+      return {
+        hash: tx.transaction_hash,
+        asset: "Rex-RWA Investment",
+        amount,
+        fractions: (amount / 500).toFixed(6),
+        apy: 7.2,
+        time: new Date(tx.timestamp).toLocaleString(),
+        wallet: addr.slice(0,6) + "..." + addr.slice(-4),
+        onChain: true,
+      };
+    });
+
+    return { txList };
+  } catch(e) {
+    console.log("Could not load from chain:", e.message);
+    return null;
+  }
+};
+
 // Get USDC balance
 const getUSDCBalance = async (addr) => {
   try {
@@ -185,18 +226,33 @@ export default function App() {
   const showToast = (msg, type="info") => { setToast({msg,type}); setTimeout(()=>setToast(null),5000); };
 
   const loadWallet = async (addr) => {
-    // Always normalize to lowercase - same address regardless of wallet app
     const normalAddr = addr.toLowerCase();
     setWallet(normalAddr);
+
+    // Load balance
     const bal = await getUSDCBalance(normalAddr);
     setBalance(bal);
-    // Load this wallet data - check both old and new keys for backward compat
+
+    // Load from localStorage first (immediate)
     const pKey = walletKey(normalAddr, "rxp");
     const tKey = walletKey(normalAddr, "rxt");
-    const portfolio = storedAll(pKey, []);
-    const txlog = storedAll(tKey, []);
-    setPortfolio(portfolio);
-    setTxLog(txlog);
+    const localPortfolio = storedAll(pKey, []);
+    const localTxLog = storedAll(tKey, []);
+    setPortfolio(localPortfolio);
+    setTxLog(localTxLog);
+
+    // Then load from blockchain (syncs across all browsers/wallets)
+    const chainData = await loadPortfolioFromChain(normalAddr);
+    if (chainData && chainData.txList.length > 0) {
+      // Merge chain txs with local ones, chain takes priority
+      setTxLog(prev => {
+        const chainHashes = new Set(chainData.txList.map(t => t.hash));
+        const localOnly = prev.filter(t => !chainHashes.has(t.hash));
+        const merged = [...chainData.txList, ...localOnly];
+        storeAll(tKey, merged);
+        return merged;
+      });
+    }
   };
 
   const connect = async () => {
